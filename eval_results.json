@@ -1,0 +1,179 @@
+{
+  "base": {
+    "easy": {
+      "best@1": {
+        "mean": 0.787,
+        "std": 0.2165
+      },
+      "best@2": {
+        "mean": 0.948,
+        "std": 0.1328
+      },
+      "best@4": {
+        "mean": 0.994,
+        "std": 0.0772
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.4915,
+        "step_accuracy": 0.1531,
+        "faithful_when_correct": 0.1638
+      }
+    },
+    "medium": {
+      "best@1": {
+        "mean": 0.621,
+        "std": 0.3333
+      },
+      "best@2": {
+        "mean": 0.7867,
+        "std": 0.3302
+      },
+      "best@4": {
+        "mean": 0.884,
+        "std": 0.3202
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.7095,
+        "step_accuracy": 0.1275,
+        "faithful_when_correct": 0.1462
+      }
+    },
+    "hard": {
+      "best@1": {
+        "mean": 0.282,
+        "std": 0.3118
+      },
+      "best@2": {
+        "mean": 0.4223,
+        "std": 0.4044
+      },
+      "best@4": {
+        "mean": 0.564,
+        "std": 0.4959
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.753,
+        "step_accuracy": 0.0653,
+        "faithful_when_correct": 0.0758
+      }
+    }
+  },
+  "checkpoint-250": {
+    "easy": {
+      "best@1": {
+        "mean": 0.9855,
+        "std": 0.0983
+      },
+      "best@2": {
+        "mean": 0.9917,
+        "std": 0.0836
+      },
+      "best@4": {
+        "mean": 0.994,
+        "std": 0.0772
+      },
+      "faithfulness": {
+        "has_steps_rate": 1.0,
+        "step_accuracy": 0.007,
+        "faithful_when_correct": 0.0066
+      }
+    },
+    "medium": {
+      "best@1": {
+        "mean": 0.6575,
+        "std": 0.4109
+      },
+      "best@2": {
+        "mean": 0.7327,
+        "std": 0.4088
+      },
+      "best@4": {
+        "mean": 0.782,
+        "std": 0.4129
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.9595,
+        "step_accuracy": 0.0355,
+        "faithful_when_correct": 0.0301
+      }
+    },
+    "hard": {
+      "best@1": {
+        "mean": 0.163,
+        "std": 0.3007
+      },
+      "best@2": {
+        "mean": 0.2243,
+        "std": 0.3701
+      },
+      "best@4": {
+        "mean": 0.29,
+        "std": 0.4538
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.901,
+        "step_accuracy": 0.0377,
+        "faithful_when_correct": 0.0147
+      }
+    }
+  },
+  "checkpoint-500": {
+    "easy": {
+      "best@1": {
+        "mean": 0.986,
+        "std": 0.0977
+      },
+      "best@2": {
+        "mean": 0.9917,
+        "std": 0.0774
+      },
+      "best@4": {
+        "mean": 0.996,
+        "std": 0.0631
+      },
+      "faithfulness": {
+        "has_steps_rate": 1.0,
+        "step_accuracy": 0.009,
+        "faithful_when_correct": 0.0076
+      }
+    },
+    "medium": {
+      "best@1": {
+        "mean": 0.667,
+        "std": 0.41
+      },
+      "best@2": {
+        "mean": 0.739,
+        "std": 0.405
+      },
+      "best@4": {
+        "mean": 0.788,
+        "std": 0.4087
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.959,
+        "step_accuracy": 0.0335,
+        "faithful_when_correct": 0.0276
+      }
+    },
+    "hard": {
+      "best@1": {
+        "mean": 0.1665,
+        "std": 0.3052
+      },
+      "best@2": {
+        "mean": 0.2273,
+        "std": 0.3703
+      },
+      "best@4": {
+        "mean": 0.298,
+        "std": 0.4574
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.8925,
+        "step_accuracy": 0.0301,
+        "faithful_when_correct": 0.0159
+      }
+    }
+  }
+}

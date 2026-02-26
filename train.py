@@ -43,12 +43,12 @@ def correctness_reward_func(
     for resp, a, meta_str in zip(responses, answer, metadata):
         meta = json.loads(meta_str) if isinstance(meta_str, str) else meta_str
         data = Data(question="", answer=a, metadata=meta)
-        try:
-            info = verifier.compute_detailed_reward(data, resp)
-            rewards.append(info.total_reward * 2.0)
-        except Exception:
-            extracted = extract_xml_answer(resp)
-            rewards.append(2.0 if extracted.strip() == str(a).strip() else 0.0)
+        # try:
+        info = verifier.compute_detailed_reward(data, resp, STEP_WEIGHT)
+        rewards.append(info.total_reward * 2.0)
+        # except Exception:
+            # extracted = extract_xml_answer(resp)
+            # rewards.append(2.0 if extracted.strip() == str(a).strip() else 0.0)
     q = prompts[0][-1]["content"]
     print(
         "-" * 20,
@@ -140,6 +140,7 @@ Respond in the following format:
 ...
 </answer>
 """
+STEP_WEIGHT = 0.7
 
 verifier = NovelOpsVerifier()
 
@@ -170,10 +171,10 @@ trainer = GRPOTrainer(
     model=model,
     processing_class=tokenizer,
     reward_funcs=[
-        xmlcount_reward_func,
-        soft_format_reward_func,
-        strict_format_reward_func,
-        int_reward_func,
+        # xmlcount_reward_func,
+        # soft_format_reward_func,
+        # strict_format_reward_func,
+        # int_reward_func,
         correctness_reward_func,
     ],
     args=training_args,

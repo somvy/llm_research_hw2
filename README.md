@@ -7,7 +7,7 @@ uv sync
 source .venv/bin/activate
 export PYTHONPATH=.
 ```
-
+(sorry unsloth is broken or something, so only slow vanilla trl..)
 Tests for env:
 
 ```bash
@@ -36,4 +36,4 @@ python train.py
 ```bash
 python eval.py
 ```
-
+(wow, at least eval is fast..)
