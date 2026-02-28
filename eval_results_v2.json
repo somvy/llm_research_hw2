@@ -1,0 +1,188 @@
+{
+  "base": {
+    "easy": {
+      "best@1": {
+        "mean": 0.7985,
+        "std": 0.2208
+      },
+      "best@2": {
+        "mean": 0.948,
+        "std": 0.1328
+      },
+      "best@4": {
+        "mean": 0.994,
+        "std": 0.0772
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.4755,
+        "step_accuracy": 0.4109,
+        "faithful_when_correct": 0.4572
+      },
+      "causal_faithfulness": 0.6581
+    },
+    "medium": {
+      "best@1": {
+        "mean": 0.608,
+        "std": 0.3381
+      },
+      "best@2": {
+        "mean": 0.7733,
+        "std": 0.3358
+      },
+      "best@4": {
+        "mean": 0.876,
+        "std": 0.3296
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.718,
+        "step_accuracy": 0.4721,
+        "faithful_when_correct": 0.5372
+      },
+      "causal_faithfulness": 0.9328
+    },
+    "hard": {
+      "best@1": {
+        "mean": 0.301,
+        "std": 0.3161
+      },
+      "best@2": {
+        "mean": 0.4483,
+        "std": 0.4082
+      },
+      "best@4": {
+        "mean": 0.59,
+        "std": 0.4918
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.7415,
+        "step_accuracy": 0.5857,
+        "faithful_when_correct": 0.7245
+      },
+      "causal_faithfulness": 0.9616
+    }
+  },
+  "checkpoint-500": {
+    "easy": {
+      "best@1": {
+        "mean": 0.9865,
+        "std": 0.0905
+      },
+      "best@2": {
+        "mean": 0.9933,
+        "std": 0.0712
+      },
+      "best@4": {
+        "mean": 0.996,
+        "std": 0.0631
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.995,
+        "step_accuracy": 0.9807,
+        "faithful_when_correct": 0.9937
+      },
+      "causal_faithfulness": 0.8462
+    },
+    "medium": {
+      "best@1": {
+        "mean": 0.7805,
+        "std": 0.327
+      },
+      "best@2": {
+        "mean": 0.8663,
+        "std": 0.2962
+      },
+      "best@4": {
+        "mean": 0.916,
+        "std": 0.2774
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.992,
+        "step_accuracy": 0.9034,
+        "faithful_when_correct": 0.984
+      },
+      "causal_faithfulness": 0.974
+    },
+    "hard": {
+      "best@1": {
+        "mean": 0.4305,
+        "std": 0.3712
+      },
+      "best@2": {
+        "mean": 0.5737,
+        "std": 0.4262
+      },
+      "best@4": {
+        "mean": 0.68,
+        "std": 0.4665
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.988,
+        "step_accuracy": 0.8593,
+        "faithful_when_correct": 0.9786
+      },
+      "causal_faithfulness": 0.9821
+    }
+  },
+  "checkpoint-final": {
+    "easy": {
+      "best@1": {
+        "mean": 0.9835,
+        "std": 0.0928
+      },
+      "best@2": {
+        "mean": 0.9937,
+        "std": 0.0776
+      },
+      "best@4": {
+        "mean": 0.994,
+        "std": 0.0772
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.994,
+        "step_accuracy": 0.9822,
+        "faithful_when_correct": 0.9958
+      },
+      "causal_faithfulness": 0.918
+    },
+    "medium": {
+      "best@1": {
+        "mean": 0.776,
+        "std": 0.3407
+      },
+      "best@2": {
+        "mean": 0.853,
+        "std": 0.3139
+      },
+      "best@4": {
+        "mean": 0.9,
+        "std": 0.3
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.9915,
+        "step_accuracy": 0.8951,
+        "faithful_when_correct": 0.9787
+      },
+      "causal_faithfulness": 0.9732
+    },
+    "hard": {
+      "best@1": {
+        "mean": 0.4435,
+        "std": 0.3741
+      },
+      "best@2": {
+        "mean": 0.586,
+        "std": 0.4147
+      },
+      "best@4": {
+        "mean": 0.708,
+        "std": 0.4547
+      },
+      "faithfulness": {
+        "has_steps_rate": 0.989,
+        "step_accuracy": 0.8729,
+        "faithful_when_correct": 0.9803
+      },
+      "causal_faithfulness": 0.974
+    }
+  }
+}

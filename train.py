@@ -1,38 +1,44 @@
 import json
-import re
+import os
 import sys
 
+os.environ["WANDB_SILENT"] = "true"
 sys.path.insert(0, ".")
 
 import torch
+from datasets import Dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, TaskType, get_peft_model
-from datasets import load_dataset, concatenate_datasets
 from trl import GRPOConfig, GRPOTrainer
 
-
 from base import Data
-from novel_ops import NovelOpsVerifier
+from novel_ops import NovelOpsEnv, NovelOpsVerifier, parse_cot
 
 
-def extract_xml_answer(text: str) -> str:
-    answer = text.split("<answer>")[-1]
-    answer = answer.split("</answer>")[0]
-    return answer.strip()
+def extract_answer(text: str) -> str:
+    _, final = parse_cot(text)
+    return str(final) if final is not None else ""
 
 
-def get_dataset():
-    ds = load_dataset("therem/novel-ops-reasoning")
-    combined = concatenate_datasets([ds[s] for s in ds])
-    combined = combined.map(
-        lambda x: {
-            "prompt": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": x["question"]},
-            ],
-        }
-    )
-    return combined
+def build_curriculum_dataset(env, system_prompt, schedule):
+    rows = []
+    prev_idx = 0
+    for last_diff_idx, difficulty in schedule.items():
+        ns = last_diff_idx - prev_idx
+        data_list = env.generate(num_of_questions=ns, difficulty=difficulty)
+        for data in data_list:
+            rows.append(
+                {
+                    "prompt": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": data.question},
+                    ],
+                    "answer": data.answer,
+                    "metadata": json.dumps(data.metadata),
+                }
+            )
+        prev_idx = last_diff_idx
+    return Dataset.from_list(rows)
 
 
 def correctness_reward_func(
@@ -43,60 +49,9 @@ def correctness_reward_func(
     for resp, a, meta_str in zip(responses, answer, metadata):
         meta = json.loads(meta_str) if isinstance(meta_str, str) else meta_str
         data = Data(question="", answer=a, metadata=meta)
-        # try:
         info = verifier.compute_detailed_reward(data, resp, STEP_WEIGHT)
         rewards.append(info.total_reward * 2.0)
-        # except Exception:
-            # extracted = extract_xml_answer(resp)
-            # rewards.append(2.0 if extracted.strip() == str(a).strip() else 0.0)
-    q = prompts[0][-1]["content"]
-    print(
-        "-" * 20,
-        f"Question:\n{q}",
-        f"\nAnswer:\n{answer[0]}",
-        f"\nResponse:\n{responses[0]}",
-        f"\nExtracted:\n{extract_xml_answer(responses[0])}",
-    )
     return rewards
-
-
-def int_reward_func(completions, **kwargs) -> list[float]:
-    responses = [c[0]["content"] for c in completions]
-    extracted = [extract_xml_answer(r) for r in responses]
-    return [0.5 if re.match(r"^-?\d+$", r.strip()) else 0.0 for r in extracted]
-
-
-def strict_format_reward_func(completions, **kwargs) -> list[float]:
-    pattern = r"^<reasoning>\n.*?\n</reasoning>\n<answer>\n.*?\n</answer>\n$"
-    responses = [c[0]["content"] for c in completions]
-    matches = [re.match(pattern, r) for r in responses]
-    return [0.5 if match else 0.0 for match in matches]
-
-
-def soft_format_reward_func(completions, **kwargs) -> list[float]:
-    pattern = r"<reasoning>.*?</reasoning>\s*<answer>.*?</answer>"
-    responses = [c[0]["content"] for c in completions]
-    matches = [re.match(pattern, r, re.DOTALL) for r in responses]
-    return [0.5 if match else 0.0 for match in matches]
-
-
-def count_xml(text) -> float:
-    count = 0.0
-    if text.count("<reasoning>\n") == 1:
-        count += 0.125
-    if text.count("\n</reasoning>\n") == 1:
-        count += 0.125
-    if text.count("\n<answer>\n") == 1:
-        count += 0.125
-        count -= len(text.split("\n</answer>\n")[-1]) * 0.001
-    if text.count("\n</answer>") == 1:
-        count += 0.125
-        count -= (len(text.split("\n</answer>")[-1]) - 1) * 0.001
-    return count
-
-
-def xmlcount_reward_func(completions, **kwargs) -> list[float]:
-    return [count_xml(c[0]["content"]) for c in completions]
 
 
 MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
@@ -107,7 +62,7 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, padding_side="left")
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
     dtype=torch.bfloat16,
-    device_map="auto",
+    # attn_implementation="flash_attention_2",
 )
 
 model = get_peft_model(
@@ -131,21 +86,35 @@ model.enable_input_require_grads()
 model.print_trainable_parameters()
 
 
-SYSTEM_PROMPT = """\
-Respond in the following format:
-<reasoning>
-...
-</reasoning>
-<answer>
-...
-</answer>
-"""
-STEP_WEIGHT = 0.7
+SYSTEM_PROMPT = "You are a helpful math assistant."
+STEP_WEIGHT = 0.8
 
 verifier = NovelOpsVerifier()
+env = NovelOpsEnv()
 
-dataset = get_dataset()
+# last id: difficulty
+CURRICULUM_SCHEDULE = {
+    200: 1,
+    400: 2,
+    550: 3,
+    700: 4,
+    900: 5,
+    1100: 6,
+    # 1300: 7,
+    # 1500: 8,
+    # 1700: 9,
+    # 1900: 10,
+}
 
+dataset = build_curriculum_dataset(env, SYSTEM_PROMPT, CURRICULUM_SCHEDULE)
+MAX_STEPS = len(dataset)
+
+print("Ds len:", len(dataset))
+print(
+    "Sample dataset:",
+    "\n".join([dataset[idx]["prompt"][1]["content"] for idx in [0, 300, 500, 1000]]),
+)
+exit()
 
 training_args = GRPOConfig(
     learning_rate=5e-6,
@@ -153,30 +122,37 @@ training_args = GRPOConfig(
     adam_beta2=0.99,
     weight_decay=0.1,
     warmup_ratio=0.1,
+    beta=0.05,
     lr_scheduler_type="cosine",
     optim="adamw_8bit",
-    logging_steps=1,
-    per_device_train_batch_size=16,
-    gradient_accumulation_steps=2,
-    num_generations=16,
+    num_generations=8,
+    per_device_train_batch_size=32,
+    gradient_accumulation_steps=4,
+    # generation_batch_size=16,
     max_completion_length=512,
-    max_steps=500,
-    save_steps=250,
+    use_vllm=True,
+    vllm_mode="colocate",
+    max_steps=MAX_STEPS,
+    save_steps=500,
     max_grad_norm=0.1,
     report_to="wandb",
     output_dir="outputs_novel_ops",
+    shuffle_dataset=False,
+    scale_rewards=False,
+    # sync_ref_model=True,
+    # ref_model_sync_steps=200,
+    logging_steps=10,
+    log_completions=True,
+    vllm_gpu_memory_utilization=0.5,
+    num_completions_to_print=0,
+    log_unique_prompts=True,
 )
+
 
 trainer = GRPOTrainer(
     model=model,
     processing_class=tokenizer,
-    reward_funcs=[
-        # xmlcount_reward_func,
-        # soft_format_reward_func,
-        # strict_format_reward_func,
-        # int_reward_func,
-        correctness_reward_func,
-    ],
+    reward_funcs=[correctness_reward_func],
     args=training_args,
     train_dataset=dataset,
 )
@@ -185,22 +161,4 @@ trainer.train()
 model.save_pretrained("novel_ops_grpo_lora")
 tokenizer.save_pretrained("novel_ops_grpo_lora")
 
-text = tokenizer.apply_chat_template(
-    [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": dataset[0]["question"]},
-    ],
-    tokenize=False,
-    add_generation_prompt=True,
-)
 
-inputs = tokenizer(text, return_tensors="pt").to(model.device)
-output_ids = model.generate(
-    **inputs, max_new_tokens=1024, temperature=0.8, top_p=0.95, do_sample=True
-)
-print(
-    "Test output:",
-    tokenizer.decode(
-        output_ids[0][inputs.input_ids.shape[1] :], skip_special_tokens=True
-    ),
-)

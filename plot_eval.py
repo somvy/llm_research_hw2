@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 with open("eval_results.json") as f:
     data = json.load(f)
 
-models = ["base", "checkpoint-250", "checkpoint-500"]
-model_labels = ["base", "ckpt-250", "ckpt-500"]
+models = list(data.keys())
 splits = ["easy", "medium", "hard"]
 metrics = ["best@1", "best@2", "best@4"]
 
@@ -34,7 +33,7 @@ for ax, split in zip(axes, splits):
 
     ax.set_title(split.capitalize(), fontsize=13)
     ax.set_xticks(x)
-    ax.set_xticklabels(model_labels, fontsize=10)
+    ax.set_xticklabels(models, fontsize=10)
     ax.set_ylim(0, 1.15)
     ax.set_ylabel("pass@k" if split == "easy" else "")
     ax.grid(axis="y", alpha=0.3)
@@ -59,7 +58,7 @@ for ax, split in zip(axes2, splits):
 
     ax.set_title(split.capitalize(), fontsize=13)
     ax.set_xticks(x)
-    ax.set_xticklabels(model_labels, fontsize=10)
+    ax.set_xticklabels(models, fontsize=10)
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("rate" if split == "easy" else "")
     ax.grid(axis="y", alpha=0.3)
@@ -68,4 +67,24 @@ axes2[-1].legend(loc="upper right")
 fig2.suptitle("Novel Ops — faithfulness by difficulty and model", fontsize=14)
 plt.tight_layout()
 plt.savefig("eval_faithfulness.png", dpi=150)
-print("saved eval_results.png + eval_faithfulness.png")
+
+split_colors = ["#4C72B0", "#DD8452", "#55A868"]
+x3 = np.arange(len(models))
+width3 = 0.25
+offsets3 = [-width3, 0, width3]
+
+fig3, ax3 = plt.subplots(figsize=(8, 5))
+for split, offset, color in zip(splits, offsets3, split_colors):
+    vals = [data[m][split].get("causal_faithfulness") or 0 for m in models]
+    ax3.bar(x3 + offset, vals, width3, label=split.capitalize(), color=color)
+
+ax3.set_xticks(x3)
+ax3.set_xticklabels(models, fontsize=10)
+ax3.set_ylim(0, 1.05)
+ax3.set_ylabel("answer change rate")
+ax3.grid(axis="y", alpha=0.3)
+ax3.legend(title="split", loc="upper right")
+fig3.suptitle("Novel Ops — causal faithfulness (intervention) by model", fontsize=14)
+plt.tight_layout()
+plt.savefig("eval_causal_faithfulness.png", dpi=150)
+print("saved eval_results.png + eval_faithfulness.png + eval_causal_faithfulness.png")

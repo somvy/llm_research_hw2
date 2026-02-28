@@ -9,6 +9,7 @@ dependencies = [
     "datasets>=4.6.0",
     "matplotlib>=3.10.8",
     "peft>=0.18.1",
+    "pytest>=9.0.2",
     "transformers==4.56.2",
     "trl>=0.29.0",
     "vllm==0.12.0",

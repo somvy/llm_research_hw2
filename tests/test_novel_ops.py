@@ -250,6 +250,52 @@ class TestParseCot:
         assert steps == []
         assert final is None
 
+    def test_multiple_equals_in_expansion(self):
+        # expansion has two = signs: formula = intermediate = result
+        response = "3 ⊕ 5 = 2*3 + 1*5 + 0 = 6 + 5 + 0 = 11\nAnswer: 11"
+        steps, final = parse_cot(response)
+        assert len(steps) == 1
+        assert steps[0].claimed_result == 11
+        assert final == 11
+
+    def test_three_equals_in_expansion(self):
+        # even more intermediate steps on one line
+        response = "8 ⊖ 14 = 4*8 - 3*14 = 32 - 42 = -10\nAnswer: -10"
+        steps, final = parse_cot(response)
+        assert len(steps) == 1
+        assert steps[0].left_val == 8
+        assert steps[0].right_val == 14
+        assert steps[0].claimed_result == -10
+        assert final == -10
+
+    def test_multi_step_with_expansions(self):
+        # each step has expansion = intermediate = result
+        response = (
+            "8 ⊖ 14 = 4*8 - 3*14 = 32 - 42 = -10\n"
+            "4 ⊖ -10 = 4*4 - 3*(-10) = 16 + 30 = 46\n"
+            "-10 ⊜ 46 = 1*(-10)*46 + 1 = -460 + 1 = -459\n"
+            "Answer: -459"
+        )
+        steps, final = parse_cot(response)
+        assert len(steps) == 3
+        assert steps[0].claimed_result == -10
+        assert steps[1].claimed_result == 46
+        assert steps[2].claimed_result == -459
+        assert final == -459
+
+    def test_expansion_starts_with_digit(self):
+        # expansion like "2*3 + 5" starts with a digit — parser must not grab it
+        response = "3 ⊕ 5 = 2*3 + 5 = 11\nAnswer: 11"
+        steps, final = parse_cot(response)
+        assert steps[0].claimed_result == 11
+
+    def test_parenthesized_negative_in_expansion(self):
+        # negative operand in expansion: 3*(-5)
+        response = "4 ⊖ -10 = 4*4 - 3*(-10) = 16 + 30 = 46\nAnswer: 46"
+        steps, final = parse_cot(response)
+        assert len(steps) == 1
+        assert steps[0].claimed_result == 46
+
 
 class TestComputeReward:
     def _make_simple_setup(self):

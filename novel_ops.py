@@ -201,7 +201,7 @@ def deserialize_expr(d: dict, op_lookup: dict[str, Operator]) -> ExprNode:
 
 
 STEP_PATTERN = re.compile(
-    r"(-?\d+)\s*([⊕⊗⊖⊘⊙⊛⊜⊞⊠⊡])\s*(-?\d+)\s*=\s*(?:.*?=\s*)?(-?\d+)"
+    r"(-?\d+)\s*([⊕⊗⊖⊘⊙⊛⊜⊞⊠⊡])\s*(-?\d+)\s*=\s*(?:.*=\s*)?(-?\d+)"
 )
 
 EXPLICIT_ANSWER_PATTERN = re.compile(

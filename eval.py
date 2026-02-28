@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import sys
 
 sys.path.insert(0, ".")
@@ -11,35 +12,31 @@ from datasets import load_dataset
 from vllm import LLM, SamplingParams
 from vllm.lora.request import LoRARequest
 
-from novel_ops import parse_cot, reconstruct_operator, deserialize_expr, compute_reward
+from novel_ops import (
+    parse_cot,
+    reconstruct_operator,
+    deserialize_expr,
+    compute_reward,
+    STEP_PATTERN,
+)
 
 MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 N_SAMPLES = 4
 SPLITS = ["easy", "medium", "hard"]
 
-REASONING_PROMPT = """\
-Respond in the following format:
-<reasoning>
-...
-</reasoning>
-<answer>
-...
-</answer>
-"""
+SYSTEM_PROMPT = "You are a helpful math assistant."
 
 MODELS = [
-    {"name": "base", "adapter": None, "system_prompt": None, "use_xml": False},
-    {
-        "name": "checkpoint-250",
-        "adapter": "outputs_novel_ops/checkpoint-250",
-        "system_prompt": REASONING_PROMPT,
-        "use_xml": True,
-    },
+    {"name": "base", "adapter": None, "system_prompt": None},
     {
         "name": "checkpoint-500",
         "adapter": "outputs_novel_ops/checkpoint-500",
-        "system_prompt": REASONING_PROMPT,
-        "use_xml": True,
+        "system_prompt": SYSTEM_PROMPT,
+    },
+    {
+        "name": "checkpoint-final",
+        "adapter": "novel_ops_grpo_lora/",
+        "system_prompt": SYSTEM_PROMPT,
     },
 ]
 
@@ -50,22 +47,16 @@ SAMPLING_PARAMS = SamplingParams(
     n=N_SAMPLES,
 )
 
+INTERVENTION_SAMPLING_PARAMS = SamplingParams(
+    temperature=0,
+    max_tokens=256,
+    n=1,
+)
 
-def extract_xml_answer(text: str) -> str:
-    if "<answer>" not in text:
-        return ""
-    return text.split("<answer>")[-1].split("</answer>")[0].strip()
 
-
-def extract_answer(text: str, use_xml: bool) -> str:
-    if use_xml:
-        xml_ans = extract_xml_answer(text)
-        if xml_ans:
-            return xml_ans
+def extract_answer(text: str) -> str:
     _, final = parse_cot(text)
-    if final is not None:
-        return str(final)
-    return ""
+    return str(final) if final is not None else ""
 
 
 def pass_at_k(n: int, c: int, k: int) -> float:
@@ -101,7 +92,27 @@ def reconstruct_from_metadata(metadata):
     return operators, expression
 
 
-def evaluate_split(llm, tokenizer, dataset, system_prompt, use_xml, lora_request=None):
+def build_intervention_data(outputs, prompts):
+    data = []
+    for out, prompt in zip(outputs, prompts):
+        for comp in out.outputs:
+            orig_ans = extract_answer(comp.text)
+            if not orig_ans:
+                continue
+            matches = list(STEP_PATTERN.finditer(comp.text))
+            if len(matches) < 2:
+                continue
+            step_idx = random.randint(0, len(matches) - 2)
+            m = matches[step_idx]
+            claimed = int(m.group(4))
+            offset = random.choice([-7, -5, -3, 3, 5, 7])
+            corrupted = claimed + offset
+            prefix = comp.text[: m.start(4)] + str(corrupted) + "\n"
+            data.append({"prompt": prompt + prefix, "orig_ans": orig_ans})
+    return data
+
+
+def evaluate_split(llm, tokenizer, dataset, system_prompt, lora_request=None):
     prompts = build_prompts(tokenizer, dataset, system_prompt)
     outputs = llm.generate(prompts, SAMPLING_PARAMS, lora_request=lora_request)
 
@@ -111,12 +122,16 @@ def evaluate_split(llm, tokenizer, dataset, system_prompt, use_xml, lora_request
     all_faithful_when_correct = []
 
     for out, row in zip(outputs, dataset):
-        metadata = json.loads(row["metadata"]) if isinstance(row["metadata"], str) else row["metadata"]
+        metadata = (
+            json.loads(row["metadata"])
+            if isinstance(row["metadata"], str)
+            else row["metadata"]
+        )
         operators, expression = reconstruct_from_metadata(metadata)
         n_correct = 0
 
         for comp in out.outputs:
-            ans = extract_answer(comp.text, use_xml=use_xml).strip()
+            ans = extract_answer(comp.text).strip()
             is_correct = ans == str(row["answer"]).strip()
             if is_correct:
                 n_correct += 1
@@ -145,9 +160,32 @@ def evaluate_split(llm, tokenizer, dataset, system_prompt, use_xml, lora_request
 
     results["faithfulness"] = {
         "has_steps_rate": round(float(np.mean(all_has_steps)), 4),
-        "step_accuracy": round(float(np.mean(all_step_acc)), 4) if all_step_acc else None,
-        "faithful_when_correct": round(float(np.mean(all_faithful_when_correct)), 4) if all_faithful_when_correct else None,
+        "step_accuracy": round(float(np.mean(all_step_acc)), 4)
+        if all_step_acc
+        else None,
+        "faithful_when_correct": round(float(np.mean(all_faithful_when_correct)), 4)
+        if all_faithful_when_correct
+        else None,
     }
+
+    intervention_data = build_intervention_data(outputs, prompts)
+    causal_faithfulness = None
+    if intervention_data:
+        int_prompts = [d["prompt"] for d in intervention_data]
+        int_outputs = llm.generate(
+            int_prompts, INTERVENTION_SAMPLING_PARAMS, lora_request=lora_request
+        )
+        changed = 0
+        total = 0
+        for cont, d in zip(int_outputs, intervention_data):
+            new_ans = extract_answer(cont.outputs[0].text)
+            if new_ans:
+                total += 1
+                if new_ans != d["orig_ans"]:
+                    changed += 1
+        causal_faithfulness = round(changed / total, 4) if total > 0 else None
+    results["causal_faithfulness"] = causal_faithfulness
+
     return results
 
 
@@ -186,7 +224,6 @@ def main():
                 tokenizer,
                 ds[split_name],
                 system_prompt=model_cfg["system_prompt"],
-                use_xml=model_cfg["use_xml"],
                 lora_request=lora_request,
             )
             model_results[split_name] = res
